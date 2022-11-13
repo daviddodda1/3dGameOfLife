@@ -127,3 +127,26 @@
     filter: invert(1);
   }
 }
+
+/* my code */
+
+.CanvasContainer {
+  width: 80vw;
+  padding: 1rem;
+  height: 70vh;
+  border: 1px solid #f00;
+}
+
+.row {
+  width: 100%;
+  height: 3.8rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cell {
+  border: 1px solid #f00;
+  width: 3.8rem;
+  height: 100%;
+  padding: 0.5rem;
+}

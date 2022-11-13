@@ -9,14 +9,23 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@react-three/drei": "^9.40.0",
+    "@react-three/fiber": "^8.9.1",
     "@types/node": "18.11.9",
     "@types/react": "18.0.25",
     "@types/react-dom": "18.0.8",
     "eslint": "8.27.0",
     "eslint-config-next": "13.0.3",
+    "framer-motion": "^7.6.6",
     "next": "13.0.3",
+    "pseudo-random-buffer": "^1.0.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "three": "^0.146.0",
+    "three-stdlib": "^2.17.3",
     "typescript": "4.8.4"
+  },
+  "devDependencies": {
+    "@types/three": "^0.146.0"
   }
 }
