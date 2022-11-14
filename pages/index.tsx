@@ -181,10 +181,10 @@ function GameBoard(props: any) {
       <motion.div className={styles.CanvasContainer}>
         <Canvas>
           <OrbitControls />
-          <pointLight intensity={0.3} position={[5, 5, 5]} />
-          <pointLight intensity={0.3} position={[-5, -5, -5]} />
-          <pointLight intensity={0.3} position={[-5, -5, 5]} />
-          <pointLight intensity={0.3} position={[5, 5, -5]} />
+          <pointLight intensity={0.5} position={[5, 5, 5]} />
+          <pointLight intensity={0.5} position={[-5, -5, -5]} />
+          <pointLight intensity={0.5} position={[-5, -5, 5]} />
+          <pointLight intensity={0.5} position={[5, 5, -5]} />
 
           <GameCubes
             game3dStateMatrix={game3dStateMatrix}
