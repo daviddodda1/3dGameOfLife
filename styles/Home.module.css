@@ -134,7 +134,7 @@
   width: 80vw;
   padding: 1rem;
   height: 70vh;
-  border: 1px solid #f00;
+  border: 1px solid #f009;
 }
 
 .row {
@@ -149,4 +149,18 @@
   width: 3.8rem;
   height: 100%;
   padding: 0.5rem;
+}
+
+.getPhantomWalletContainer {
+  text-align: center;
+}
+
+.getPhantomWalletContainer > a {
+  color: #f00;
+  text-decoration: none;
+}
+.connectPhantomWalletContainer {
+  background-color: #000;
+  border: 1px solid #f00;
+  padding: 1rem;
 }

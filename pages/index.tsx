@@ -2,29 +2,93 @@ import Head from "next/head";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import styles from "../styles/Home.module.css";
-
+import { PublicKey } from "@solana/web3.js";
+// @ts-ignore
 import * as prb from "pseudo-random-buffer";
 
 import { motion, MotionConfig, useAnimationFrame } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Box, Line, OrbitControls } from "@react-three/drei";
+import { Box, Line, OrbitControls, Stats } from "@react-three/drei";
 
-const randomString = "Hello World!";
 const x = 10;
 const y = 10;
 const z = 10;
 
+type DisplayEncoding = "utf8" | "hex";
+type PhantomEvent = "disconnect" | "connect" | "accountChanged";
+type PhantomRequestMethod = "connect" | "disconnect";
+
+interface ConnectOpts {
+  onlyIfTrusted: boolean;
+}
+
+interface PhantomProvider {
+  publicKey: PublicKey | null;
+  isConnected: boolean | null;
+  connect: (opts?: Partial<ConnectOpts>) => Promise<{ publicKey: PublicKey }>;
+  disconnect: () => Promise<void>;
+  on: (event: PhantomEvent, handler: (args: any) => void) => void;
+  request: (method: PhantomRequestMethod, params: any) => Promise<unknown>;
+}
+
+const getProvider = (): PhantomProvider | undefined => {
+  if ("solana" in window) {
+    // @ts-ignore
+    const provider = window.solana as any;
+    if (provider.isPhantom) return provider as PhantomProvider;
+  }
+};
+
 export default function Home() {
   const [gameState, setGameState] = useState([true]);
   const [gameStateArray, setGameStateArray] = useState<boolean[][]>([]);
+
+  const [walletAddress, setWalletAddress] = useState("");
+  const [provider, setProvider] = useState<PhantomProvider | undefined>(
+    undefined
+  );
   useEffect(() => {
     setGameStateArray([]);
-    for (let i = 0; i < z; i++) {
-      const newGameState = generateGameFrame(randomString, i);
-      setGameStateArray((oldArray) => [...oldArray, newGameState]);
+    if (walletAddress != "") {
+      for (let i = 0; i < z; i++) {
+        const newGameState = generateGameFrame(walletAddress, i);
+        setGameStateArray((oldArray) => [...oldArray, newGameState]);
+      }
+      console.log("this", gameStateArray);
     }
-    console.log("this", gameStateArray);
+  }, [walletAddress]);
+
+  useEffect(() => {
+    const provider = getProvider();
+
+    if (provider) setProvider(provider);
+    else setProvider(undefined);
   }, []);
+
+  const connectWallet = async () => {
+    // @ts-ignore
+    const { solana } = window;
+
+    if (solana) {
+      try {
+        const response = await solana.connect();
+        console.log("wallet account ", response.publicKey.toString());
+        setWalletAddress(response.publicKey.toString());
+      } catch (err) {
+        // { code: 4001, message: 'User rejected the request.' }
+      }
+    }
+  };
+
+  const disconnectWallet = async () => {
+    // @ts-ignore
+    const { solana } = window;
+
+    if (walletAddress && solana) {
+      await (solana as PhantomProvider).disconnect();
+      setWalletAddress("");
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -37,11 +101,45 @@ export default function Home() {
       <main className={styles.main}>
         {gameStateArray.length == z ? (
           <>
-            <GameBoard gameStateArray={gameStateArray}></GameBoard>
-            <p>{`Random Seed "${randomString}"`}</p>
+            <GameBoard
+              randomString={walletAddress}
+              gameStateArray={gameStateArray}
+            ></GameBoard>
+            <p>{`Connected Wallet "${walletAddress}"`}</p>
+            <motion.p
+              style={{ color: "#f00", cursor: "pointer" }}
+              onClick={() => disconnectWallet()}
+            >
+              disconnect
+            </motion.p>
           </>
         ) : (
-          "Loading Frames..."
+          <>
+            {!provider ? (
+              <div className={styles.getPhantomWalletContainer}>
+                <p>Phantom Wallet not detected</p>
+                <a
+                  href={"https://phantom.app/"}
+                  rel="noreferrer"
+                  target={"_blank"}
+                >
+                  Get Phantom Wallet
+                </a>
+              </div>
+            ) : (
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{
+                  scale: 1,
+
+                  borderRadius: "5px",
+                }}
+                className={styles.connectPhantomWalletContainer}
+              >
+                <div onClick={connectWallet}>Connect to Phantom Wallet</div>
+              </motion.div>
+            )}
+          </>
         )}
       </main>
     </div>
@@ -51,7 +149,6 @@ export default function Home() {
 function GameBoard(props: any) {
   const [game3dStateMatrix, setGame3dStateMatrix] = useState([[[null]]]);
   const [firstTrue, setFirstTrue] = useState([]);
-  const [zRotation, setZRotation] = useState(0);
 
   useEffect(() => {
     setFirstTrue([]);
@@ -63,7 +160,7 @@ function GameBoard(props: any) {
         const row = [];
         for (let k = 0; k < y; k++) {
           row.push(props.gameStateArray[i][j * x + k]);
-          const randomBytes = prb(`${randomString}_${i}_${j}_${k}`);
+          const randomBytes = prb(`${props.randomString}_${i}_${j}_${k}`);
           const randomBuffer = randomBytes(1);
           if (randomBuffer[0] == 1 || randomBuffer[0] == 2) {
             redArr.push(`${i}_${j}_${k}`);
@@ -79,91 +176,67 @@ function GameBoard(props: any) {
     console.log(newGame3dStateMatrix);
   }, [props.gameStateArray]);
 
-  useAnimationFrame(() => {
-    setZRotation((old) => old + 0.01);
-  });
-
   return (
     <motion.div>
       <motion.div className={styles.CanvasContainer}>
         <Canvas>
           <OrbitControls />
-          <pointLight intensity={0.3} position={[10, 10, 10]} />
-          <pointLight intensity={0.3} position={[-10, -10, -10]} />
-          <pointLight intensity={0.3} position={[-10, -10, 10]} />
-          <pointLight intensity={0.3} position={[10, 10, -10]} />
+          <pointLight intensity={0.3} position={[5, 5, 5]} />
+          <pointLight intensity={0.3} position={[-5, -5, -5]} />
+          <pointLight intensity={0.3} position={[-5, -5, 5]} />
+          <pointLight intensity={0.3} position={[5, 5, -5]} />
 
-          <mesh scale={[0.35, 0.35, 0.35]} rotation={[0, zRotation, 0]}>
-            {game3dStateMatrix.map((gameStateMatrix, i) => {
-              return gameStateMatrix.map((row, j) => {
-                return row.map((cell, k) => {
-                  return (
-                    <mesh
-                      key={`${i - 5}-${j - 5}-${k - 5}`}
-                      position={[i - 5, j - 5, k - 5]}
-                    >
-                      {/* <boxGeometry />
-                      <meshPhongMaterial
-                        color={cell ? "white" : "white"}
-                        opacity={cell ? 0.5 : 0}
-                        transparent
-                      /> */}
-
-                      {/* Box Form Lines */}
-                      {/* @ts-ignore */}
-                      {/* <Line
-                        points={[
-                          [0, 0, 0],
-                          [1, 0, 0],
-                          [1, 1, 0],
-                          [0, 1, 0],
-                          [0, 0, 0],
-                          [0, 0, 1],
-                          [1, 0, 1],
-                          [1, 1, 1],
-                          [0, 1, 1],
-                          [0, 0, 1],
-                          [0, 0, 0],
-                          [0, 0, 1],
-                          [0, 1, 1],
-                          [0, 1, 0],
-                          [0, 0, 0],
-                          [1, 0, 0],
-                          [1, 0, 1],
-                          [1, 1, 1],
-                          [1, 1, 0],
-                          [1, 0, 0],
-                        ]}
-                        color="white"
-                        opacity={0.5}
-                      ></Line> */}
-                      {cell ? (
-                        <Box position={[0.5, 0.5, 0.5]} scale={[0.8, 0.8, 0.8]}>
-                          <meshPhysicalMaterial
-                            color={
-                              // @ts-ignore
-                              firstTrue.indexOf(`${i}_${j}_${k}`) != -1
-                                ? "red"
-                                : "white"
-                            }
-                            opacity={0.9}
-                            transparent
-                            roughness={1}
-                            metalness={0}
-                          ></meshPhysicalMaterial>
-                        </Box>
-                      ) : (
-                        <></>
-                      )}
-                    </mesh>
-                  );
-                });
-              });
-            })}
-          </mesh>
+          <GameCubes
+            game3dStateMatrix={game3dStateMatrix}
+            firstTrue={firstTrue}
+          ></GameCubes>
+          <Stats />
         </Canvas>
       </motion.div>
     </motion.div>
+  );
+}
+
+function GameCubes(props: any) {
+  const [zRotation, setZRotation] = useState(0);
+
+  useFrame(({ clock }) => {
+    setZRotation((old) => old + Math.min(0.05, clock.getDelta()));
+  });
+
+  return (
+    <mesh scale={[0.35, 0.35, 0.35]} rotation={[0, zRotation, 0]}>
+      {props.game3dStateMatrix.map((gameStateMatrix: any, i: number) => {
+        return gameStateMatrix.map((row: any, j: number) => {
+          return row.map((cell: any, k: number) => {
+            return (
+              <mesh
+                key={`${i - 5}-${j - 5}-${k - 5}`}
+                position={[i - 5, j - 5, k - 5]}
+              >
+                {cell ? (
+                  <Box position={[0.5, 0.5, 0.5]} scale={[0.8, 0.8, 0.8]}>
+                    <meshPhongMaterial
+                      color={
+                        // @ts-ignore
+                        props.firstTrue.indexOf(`${i}_${j}_${k}`) != -1
+                          ? "red"
+                          : "white"
+                      }
+                      opacity={0.9}
+                      transparent
+                      // roughness={1}
+                    ></meshPhongMaterial>
+                  </Box>
+                ) : (
+                  <></>
+                )}
+              </mesh>
+            );
+          });
+        });
+      })}
+    </mesh>
   );
 }
 
@@ -198,3 +271,5 @@ function getBitFromBuffer(bitIndex: number, bufferObj: Buffer) {
     return false;
   } // otherwise, the bit is not set
 }
+
+// TODO try clear coat meterial property.
