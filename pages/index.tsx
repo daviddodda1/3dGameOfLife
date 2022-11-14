@@ -49,12 +49,20 @@ export default function Home() {
   );
   useEffect(() => {
     setGameStateArray([]);
+    const gameStateArr = [];
     if (walletAddress != "") {
-      for (let i = 0; i < z; i++) {
-        const newGameState = generateGameFrame(walletAddress, i);
-        setGameStateArray((oldArray) => [...oldArray, newGameState]);
+      let newGameState = generateGameFrame(walletAddress, 0);
+      gameStateArr.push(newGameState);
+      console.log(newGameState);
+      // setGameStateArray((oldArray) => [...oldArray, newGameState]);
+      for (let i = 0; i < z - 1; i++) {
+        newGameState = generateNextGameFrame(newGameState);
+        gameStateArr.push(newGameState);
+        // setGameStateArray((oldArray) => [...oldArray, newGameState]);
+        console.log(newGameState);
       }
-      console.log("this", gameStateArray);
+      setGameStateArray(gameStateArr);
+      console.log("this", gameStateArr);
     }
   }, [walletAddress]);
 
@@ -151,6 +159,8 @@ function GameBoard(props: any) {
   const [firstTrue, setFirstTrue] = useState([]);
 
   useEffect(() => {
+    console.log(props.gameStateArray);
+
     setFirstTrue([]);
     const newGame3dStateMatrix = [];
     const redArr = [];
@@ -159,7 +169,7 @@ function GameBoard(props: any) {
       for (let j = 0; j < x; j++) {
         const row = [];
         for (let k = 0; k < y; k++) {
-          row.push(props.gameStateArray[i][j * x + k]);
+          row.push(props.gameStateArray[k][i * x + j]);
           const randomBytes = prb(`${props.randomString}_${i}_${j}_${k}`);
           const randomBuffer = randomBytes(1);
           if (randomBuffer[0] == 1 || randomBuffer[0] == 2) {
@@ -190,7 +200,7 @@ function GameBoard(props: any) {
             game3dStateMatrix={game3dStateMatrix}
             firstTrue={firstTrue}
           ></GameCubes>
-          <Stats />
+          {/* <Stats /> */}
         </Canvas>
       </motion.div>
     </motion.div>
@@ -212,7 +222,7 @@ function GameCubes(props: any) {
             return (
               <mesh
                 key={`${i - 5}-${j - 5}-${k - 5}`}
-                position={[i - 5, j - 5, k - 5]}
+                position={[k - 5, j - 5, i - 5]}
               >
                 {cell ? (
                   <Box position={[0.5, 0.5, 0.5]} scale={[0.8, 0.8, 0.8]}>
@@ -258,6 +268,45 @@ function generateGameFrame(randomString: string, frameNumber: number) {
     }
   }
   return newGameState;
+}
+
+function generateNextGameFrame(currentGameState: any) {
+  const nextGeneration = new Array(x * y);
+  for (let i = 0; i < x; i++) {
+    for (let j = 0; j < y; j++) {
+      const numberOfNeighbors = getNumberOfNeighbors(currentGameState, i, j);
+      const cell = currentGameState[(j - 1) * x + i];
+      if (cell) {
+        if (numberOfNeighbors < 2 || numberOfNeighbors > 3) {
+          nextGeneration[(j - 1) * x + i] = false;
+        } else {
+          nextGeneration[(j - 1) * x + i] = true;
+        }
+      } else {
+        if (numberOfNeighbors === 3) {
+          nextGeneration[(j - 1) * x + i] = true;
+        } else {
+          nextGeneration[(j - 1) * x + i] = false;
+        }
+      }
+    }
+  }
+  return nextGeneration;
+}
+
+function getNumberOfNeighbors(
+  currentGameState: boolean[],
+  l: number,
+  m: number
+) {
+  let aliveNeighbours = 0;
+  for (let i = -1; i < 2; i++) {
+    for (let j = -1; j < 2; j++) {
+      if (l + i >= 0 && l + i < x && m + j >= 0 && m + j < y)
+        aliveNeighbours += currentGameState[(m + j - 1) * x + l + i] ? 1 : 0;
+    }
+  }
+  return aliveNeighbours;
 }
 
 function getBitFromBuffer(bitIndex: number, bufferObj: Buffer) {
